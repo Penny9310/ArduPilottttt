@@ -26,6 +26,7 @@
 #include <stdarg.h>
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_LandingAI/AP_LandingAI.h>
 
 // Common dependencies
 #include <AP_Common/AP_Common.h>            // Common definitions and utility routines for the ArduPilot libraries
@@ -72,6 +73,8 @@
 #include <AP_OpticalFlow/AP_OpticalFlow.h>
 #include <AP_Winch/AP_Winch_config.h>
 #include <AP_SurfaceDistance/AP_SurfaceDistance.h>
+
+#include <GCS_MAVLink/GCS_MAVLink.h>
 
 // Configuration
 #include "defines.h"
@@ -233,6 +236,7 @@ public:
     friend class PayloadPlace;
 
     Copter(void);
+    AP_LandingAI landing_ai;
 
 private:
 

@@ -865,6 +865,14 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
         plane.set_mode(plane.mode_rtl, ModeReason::GCS_COMMAND);
         return MAV_RESULT_ACCEPTED;
 
+    // 在下方加入您的自定義指令：
+    case 31020: // MAV_CMD_START_AI_LANDING
+    // 呼叫 AP_LandingAI 處理啟動邏輯
+    if (plane.landing_ai.handle_start_command(packet)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+
 #if AP_MAVLINK_MAV_CMD_SET_HAGL_ENABLED
     case MAV_CMD_SET_HAGL:
         plane.handle_external_hagl(packet);
@@ -1025,6 +1033,11 @@ void GCS_MAVLINK_Plane::handle_manual_control_axes(const mavlink_manual_control_
 
 void GCS_MAVLINK_Plane::handle_message(const mavlink_message_t &msg)
 {
+    /* Story 1.3: 處理來自 AI 電腦的修正數據。
+       將訊息傳遞給 AP_LandingAI 函式庫進行解析與安全性檢查。
+    */
+    plane.landing_ai.handle_msg(msg);
+    
     switch (msg.msgid) {
 
     case MAVLINK_MSG_ID_TERRAIN_DATA:

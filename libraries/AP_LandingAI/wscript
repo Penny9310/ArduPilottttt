@@ -1,0 +1,6 @@
+def build(bld):
+    bld.ap_library(
+        name='AP_LandingAI',
+        sources=bld.path.ant_glob('*.cpp'),
+        use='GCS_MAVLink AP_Common AP_HAL AP_Math',
+    )

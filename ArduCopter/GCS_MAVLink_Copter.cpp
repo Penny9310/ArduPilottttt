@@ -4,6 +4,8 @@
 #include <AP_RPM/AP_RPM_config.h>
 #include <AP_EFI/AP_EFI_config.h>
 
+#include <AP_LandingAI/AP_LandingAI.h>
+
 MAV_TYPE GCS_Copter::frame_type() const
 {
     /*
@@ -420,6 +422,26 @@ void GCS_MAVLINK_Copter::send_banner()
 void GCS_MAVLINK_Copter::handle_command_ack(const mavlink_message_t &msg)
 {
     copter.command_ack_counter++;
+
+    // --- 開始：Story 1.2 實作邏輯 ---
+    mavlink_command_ack_t packet;
+    mavlink_msg_command_ack_decode(&msg, &packet);
+
+    // 判斷是否為你的 AI Landing 指令 (31020)
+    if (packet.command == 31020) {
+        if (packet.result == MAV_RESULT_ACCEPTED) {
+            // 根據 Acceptance Criteria: 記錄成功
+            gcs().send_text(MAV_SEVERITY_INFO, "AI Landing: Command Accepted");
+        } else {
+            // 根據 Acceptance Criteria: 記錄失敗與 result_param2
+            gcs().send_text(MAV_SEVERITY_ERROR, "AI Landing: Failed, Error: %d", packet.result_param2);
+        }
+        
+        // 這裡可以通知你的 AI 狀態機「收到回应了」，停止 1000ms 的超時計數
+        // copter.landing_ai.on_ack_received(packet.result); 
+    }
+    // --- 結束：Story 1.2 實作邏輯 ---
+
     GCS_MAVLINK::handle_command_ack(msg);
 }
 
@@ -512,6 +534,24 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_do_reposition(const mavlink_co
 MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     switch(packet.command) {
+
+        // --- STORY 1.2 第一層驗證診斷開始 ---
+    case 31020: { // MAV_CMD_START_AI_LANDING
+        // 1. 呼叫 AP_LandingAI 內部的發送函式，這會啟動 1000ms 計時器
+        copter.landing_ai.send_start_landing_cmd(
+            (uint8_t)packet.param1, // stream
+            packet.param2,          // freq_hz
+            (uint8_t)packet.z       // frame (注意：mavlink_command_int_t 中 z 對應 param7)
+        );
+
+        hal.console->printf("STORY 1.2: AI Landing logic triggered, waiting for ACK...\n");
+        
+        // 2. 回傳 ACCEPTED 代表飛控已受理此啟動請求
+        return MAV_RESULT_ACCEPTED; 
+
+        
+
+    }
 
     case MAV_CMD_CONDITION_YAW:
         return handle_MAV_CMD_CONDITION_YAW(packet);
@@ -1234,6 +1274,11 @@ void GCS_MAVLINK_Copter::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT:
         handle_message_set_position_target_global_int(msg);
         break;
+
+    case MAVLINK_MSG_ID_AI_LANDING_CORRECTION: // 假設 ID 為 180
+        copter.landing_ai.handle_msg(msg);
+
+    break;
 #endif
 #if AP_TERRAIN_AVAILABLE
     case MAVLINK_MSG_ID_TERRAIN_DATA:

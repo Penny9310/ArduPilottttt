@@ -111,6 +111,9 @@ SCHED_TASK_CLASS arguments:
 
  */
 const AP_Scheduler::Task Copter::scheduler_tasks[] = {
+    
+    SCHED_TASK_CLASS(AP_LandingAI, &copter.landing_ai, update, 10, 100, 170),
+
     // update INS immediately to get current gyro data populated
     FAST_TASK_CLASS(AP_InertialSensor, &copter.ins, update),
     // run low level rate controllers that only require IMU data
@@ -739,6 +742,7 @@ void Copter::twentyfive_hz_logging()
 // three_hz_loop - 3hz loop
 void Copter::three_hz_loop()
 {
+
     // check if we've lost contact with the ground station
     failsafe_gcs_check();
 

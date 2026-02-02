@@ -392,6 +392,9 @@ void Plane::one_second_loop()
     rollController.set_notch_sample_rate(loop_rate);
     pitchController.set_notch_sample_rate(loop_rate);
     yawController.set_notch_sample_rate(loop_rate);
+
+    landing_ai.update();
+    gcs().send_text(MAV_SEVERITY_INFO, "LandingAI Loop Active");
 }
 
 void Plane::three_hz_loop()
