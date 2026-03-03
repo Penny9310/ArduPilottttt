@@ -1033,10 +1033,13 @@ void GCS_MAVLINK_Plane::handle_manual_control_axes(const mavlink_manual_control_
 
 void GCS_MAVLINK_Plane::handle_message(const mavlink_message_t &msg)
 {
-    /* Story 1.3: 處理來自 AI 電腦的修正數據。
-       將訊息傳遞給 AP_LandingAI 函式庫進行解析與安全性檢查。
-    */
-    plane.landing_ai.handle_msg(msg);
+    // --- Story 1.3: 處理來自 AI 電腦的修正數據 ---
+    // 優先攔截自定義訊息 ID 180 (AI_LANDING_CORRECTION)
+    if (msg.msgid == 187) {
+        hal.console->printf("GCS_Mav: Recv ID 187 from Comp %u\n", msg.compid);
+        plane.landing_ai.handle_msg(msg);
+        return; // 處理完畢直接返回，不進入後續 switch
+    }
     
     switch (msg.msgid) {
 
@@ -1060,9 +1063,10 @@ void GCS_MAVLINK_Plane::handle_message(const mavlink_message_t &msg)
         break;
 
     default:
+        // 呼叫父類別的通用處理 (handle_message)
         GCS_MAVLINK::handle_message(msg);
         break;
-    } // end switch
+    }
 } // end handle mavlink
 
 void GCS_MAVLINK_Plane::handle_set_attitude_target(const mavlink_message_t &msg)
