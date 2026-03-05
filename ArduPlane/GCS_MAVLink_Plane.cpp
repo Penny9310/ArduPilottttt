@@ -865,13 +865,18 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
         plane.set_mode(plane.mode_rtl, ModeReason::GCS_COMMAND);
         return MAV_RESULT_ACCEPTED;
 
-    // 在下方加入您的自定義指令：
+        // --- Unico AI Landing custom commands (from flightstack.xml dialect) ---
     case 31020: // MAV_CMD_START_AI_LANDING
-    // 呼叫 AP_LandingAI 處理啟動邏輯
-    if (plane.landing_ai.handle_start_command(packet)) {
-        return MAV_RESULT_ACCEPTED;
-    }
-    return MAV_RESULT_FAILED;
+        if (plane.landing_ai.handle_start_command(packet)) {
+            return MAV_RESULT_ACCEPTED;
+        }
+        return MAV_RESULT_FAILED;
+
+    case 31021: // MAV_CMD_STOP_AI_LANDING
+        if (plane.landing_ai.handle_stop_command(packet)) {
+            return MAV_RESULT_ACCEPTED;
+        }
+        return MAV_RESULT_FAILED;
 
 #if AP_MAVLINK_MAV_CMD_SET_HAGL_ENABLED
     case MAV_CMD_SET_HAGL:
@@ -1033,13 +1038,17 @@ void GCS_MAVLINK_Plane::handle_manual_control_axes(const mavlink_manual_control_
 
 void GCS_MAVLINK_Plane::handle_message(const mavlink_message_t &msg)
 {
-    // --- Story 1.3: 處理來自 AI 電腦的修正數據 ---
-    // 優先攔截自定義訊息 ID 180 (AI_LANDING_CORRECTION)
-    if (msg.msgid == 187) {
-        hal.console->printf("GCS_Mav: Recv ID 187 from Comp %u\n", msg.compid);
-        plane.landing_ai.handle_msg(msg);
-        return; // 處理完畢直接返回，不進入後續 switch
+    // --- Unico AI Landing: intercept ACK + custom correction/status messages ---
+    // COMMAND_ACK is standard MAVLink msg id
+    if (msg.msgid == MAVLINK_MSG_ID_COMMAND_ACK ||
+    msg.msgid == 187 ||     // AI_LANDING_CORRECTION
+    msg.msgid == 52102) {   // AI_LANDING_STATUS (moved away from 188)
+    plane.landing_ai.handle_msg(msg);
+    if (msg.msgid == MAVLINK_MSG_ID_COMMAND_ACK || msg.msgid == 187) {
+        return;
     }
+    return;
+}
     
     switch (msg.msgid) {
 
